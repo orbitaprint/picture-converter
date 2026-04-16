@@ -4,6 +4,7 @@ from PIL import Image
 
 from app.utils.file_utils import ensure_directory, unique_path
 from app.utils.logger import LOGGER
+from app.utils.page_ranges import parse_page_ranges
 
 
 class PdfConversionError(Exception):
@@ -42,7 +43,15 @@ def create_pdf_from_images(image_paths, output_pdf_path, progress_callback=None)
                 pass
 
 
-def convert_pdf_to_jpg(pdf_path, output_folder, quality, progress_callback=None):
+def convert_pdf_to_images(
+    pdf_path,
+    output_folder,
+    image_format,
+    quality,
+    naming_pattern,
+    page_ranges,
+    progress_callback=None,
+):
     if not pdf_path:
         raise PdfConversionError("PDF path is required.")
 
@@ -54,9 +63,7 @@ def convert_pdf_to_jpg(pdf_path, output_folder, quality, progress_callback=None)
     try:
         import fitz
     except ImportError:
-        message = (
-            "PyMuPDF is not installed. Install it with: pip install PyMuPDF==1.24.10"
-        )
+        message = "PyMuPDF is not installed. Install it with: pip install PyMuPDF==1.24.10"
         LOGGER.error(message)
         raise PdfConversionError(message)
 
@@ -64,21 +71,27 @@ def convert_pdf_to_jpg(pdf_path, output_folder, quality, progress_callback=None)
 
     try:
         doc = fitz.open(pdf_path)
-        total = doc.page_count
+        page_indexes = parse_page_ranges(page_ranges, doc.page_count)
+        total = len(page_indexes)
 
-        for page_index in range(total):
+        ext = "jpg" if image_format.lower() == "jpg" else "png"
+
+        for step_index, page_index in enumerate(page_indexes):
             page = doc.load_page(page_index)
             pix = page.get_pixmap(alpha=False)
 
-            base_name = "page_%03d.jpg" % (page_index + 1)
-            output_path = os.path.join(output_folder, base_name)
-            output_path = unique_path(output_path)
+            file_base = naming_pattern.format(page=page_index + 1)
+            file_name = "%s.%s" % (file_base, ext)
+            output_path = unique_path(os.path.join(output_folder, file_name))
 
-            pix.save(output_path, jpg_quality=int(quality))
+            if ext == "jpg":
+                pix.save(output_path, jpg_quality=int(quality))
+            else:
+                pix.save(output_path)
             output_files.append(output_path)
 
             if progress_callback:
-                progress_callback(page_index + 1, total)
+                progress_callback(step_index + 1, total)
 
         doc.close()
         LOGGER.info("PDF converted: %s -> %s", pdf_path, output_folder)

@@ -1,23 +1,23 @@
 import tkinter as tk
 from tkinter import ttk
 
-from app.styles.theme import Theme
+from app.styles.theme import colors
 
 
 class DropZone(ttk.Frame):
     def __init__(self, parent, text, on_click=None):
         ttk.Frame.__init__(self, parent, style="Surface.TFrame")
-        self._text = text
         self._on_click = on_click
 
-        self._box = tk.Frame(self, bd=1, relief="solid", bg=Theme.COLORS["surface_alt"], highlightthickness=0)
+        c = colors()
+        self._box = tk.Frame(self, bd=1, relief="solid", bg=c["surface_alt"], highlightthickness=0)
         self._box.pack(fill="x")
 
         self.label = tk.Label(
             self._box,
             text=text,
-            bg=Theme.COLORS["surface_alt"],
-            fg=Theme.COLORS["muted"],
+            bg=c["surface_alt"],
+            fg=c["muted"],
             padx=12,
             pady=16,
             cursor="hand2",
@@ -30,10 +30,12 @@ class DropZone(ttk.Frame):
         self.label.bind("<Button-1>", self._on_click_event)
 
     def _on_enter(self, _event):
-        self.label.configure(bg="#e2ebff", fg=Theme.COLORS["primary"])
+        c = colors()
+        self.label.configure(bg="#e2ebff" if c["bg"] != "#1b1f24" else "#2f4d74", fg=c["primary"])
 
     def _on_leave(self, _event):
-        self.label.configure(bg=Theme.COLORS["surface_alt"], fg=Theme.COLORS["muted"])
+        c = colors()
+        self.label.configure(bg=c["surface_alt"], fg=c["muted"])
 
     def _on_click_event(self, _event):
         if self._on_click:
@@ -43,6 +45,7 @@ class DropZone(ttk.Frame):
 class FileListPanel(ttk.Frame):
     def __init__(self, parent, title):
         ttk.Frame.__init__(self, parent, style="Surface.TFrame")
+        c = colors()
 
         frame = ttk.LabelFrame(self, text=title, style="Card.TLabelframe", padding=10)
         frame.pack(fill="both", expand=True)
@@ -52,11 +55,13 @@ class FileListPanel(ttk.Frame):
             relief="flat",
             bd=0,
             highlightthickness=1,
-            highlightbackground=Theme.COLORS["border"],
-            selectbackground="#dbe8ff",
-            selectforeground=Theme.COLORS["text"],
+            highlightbackground=c["border"],
+            selectbackground="#dbe8ff" if c["bg"] != "#1b1f24" else "#3b4a5a",
+            selectforeground=c["text"],
             activestyle="none",
             height=10,
+            bg=c["surface"],
+            fg=c["text"],
         )
         self.listbox.pack(fill="both", expand=True)
 
@@ -74,12 +79,13 @@ class InlineNotice(ttk.Frame):
         self.label.pack(anchor="w")
 
     def show(self, message, level="info"):
-        color = Theme.COLORS["muted"]
+        c = colors()
+        color = c["muted"]
         if level == "success":
-            color = Theme.COLORS["success"]
+            color = c["success"]
         elif level == "error":
-            color = Theme.COLORS["error"]
+            color = c["error"]
         elif level == "warning":
-            color = Theme.COLORS["warning"]
+            color = c["warning"]
         self.label.configure(foreground=color)
         self.var.set(message)

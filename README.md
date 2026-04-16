@@ -202,3 +202,26 @@ The UI layer now uses reusable components and centralized theming:
 - `app/components/notifications.py` for app-wide status notifications.
 
 This keeps tabs smaller and consistent while preserving Python 3.8 and tkinter/ttk compatibility.
+
+## Expanded PDF toolkit (MVP)
+
+New PDF-focused tools are available in **PDF -> PDF Tools**:
+- Merge multiple PDFs with reorder controls
+- Split PDF (every page or selected ranges)
+- Extract selected pages to a new PDF
+- Rotate all/selected pages (90/180/270)
+- Delete selected pages (non-destructive output)
+- Unlock password-protected PDF (save unlocked copy)
+- View and edit metadata (title, author, subject, keywords)
+- Document info panel (name, size, page count)
+
+PDF -> Images now supports:
+- JPG or PNG export
+- page range input (`1-3,5,8-10`)
+- custom naming pattern with `{page}` token
+
+## Practical limitations
+
+- True high-ratio PDF compression is limited in pure Python workflows.
+- This app focuses on practical structural editing and page/image workflows.
+- Advanced compression/OCR/watermark pipelines are planned for v2.
