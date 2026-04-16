@@ -182,3 +182,23 @@ If a release workflow is stuck with message `Waiting for a runner to pick up thi
 2. Ensure you have available GitHub Actions minutes (for private repositories).
 3. Re-run workflow from Actions tab.
 4. If the runner label is deprecated, use a newer image (this project uses `windows-2022`).
+
+## One-click release from GitHub UI (no git on PC)
+
+You can publish a release without local git:
+
+1. Open **Actions** tab.
+2. Open workflow **Build and Release Windows App**.
+3. Click **Run workflow**.
+4. Enter version like `1.0.1`.
+5. Workflow creates tag `v1.0.1`, builds app, and publishes Release with `PictureConverter-portable.zip`.
+
+## UI modernization architecture
+
+The UI layer now uses reusable components and centralized theming:
+- `app/styles/theme.py` for spacing scale, typography, colors and ttk style setup.
+- `app/components/ui_kit.py` for reusable drop zone, list panel and inline status notice.
+- `app/components/queue_model.py` for reusable queue operations.
+- `app/components/notifications.py` for app-wide status notifications.
+
+This keeps tabs smaller and consistent while preserving Python 3.8 and tkinter/ttk compatibility.

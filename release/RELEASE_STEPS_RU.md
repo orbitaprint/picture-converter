@@ -31,3 +31,11 @@ git push origin v1.0.0
 ## Важно для Windows 7
 
 Если нужна максимальная совместимость с Windows 7, лучше собирать EXE на Windows 7 (или в Win7 VM) с Python 3.8.
+
+## Вариант C — вообще без git и терминала (через кнопку)
+
+1. Откройте вкладку **Actions** в GitHub.
+2. Выберите workflow **Build and Release Windows App**.
+3. Нажмите **Run workflow**.
+4. Введите версию, например `1.0.1`.
+5. Workflow сам создаст тег `v1.0.1`, соберёт приложение и опубликует Release с `PictureConverter-portable.zip`.

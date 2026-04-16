@@ -3,171 +3,147 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 from config import SUPPORTED_IMAGE_INPUTS
+from app.components.queue_model import FileQueueModel
+from app.components.ui_kit import DropZone, FileListPanel
 from app.services.pdf_converter import create_pdf_from_images
+from app.styles.theme import Theme
 from app.utils.dnd import parse_drop_paths
 from app.utils.file_utils import is_supported_extension
 
 
 class ImagesToPdfTab(object):
-    def __init__(self, parent, dnd_enabled, start_job_callback):
-        self.frame = ttk.Frame(parent, padding=12)
+    def __init__(self, parent, dnd_enabled, start_job_callback, notifications):
+        self.frame = ttk.Frame(parent, style="Surface.TFrame", padding=Theme.S12)
         self.dnd_enabled = dnd_enabled
         self.start_job_callback = start_job_callback
-        self.files = []
+        self.notifications = notifications
+        self.queue = FileQueueModel()
 
         self.output_var = tk.StringVar(value="")
-        self.status_var = tk.StringVar(value="Ready")
-
         self._build_ui()
 
     def _build_ui(self):
-        top = ttk.LabelFrame(self.frame, text="Images", padding=8)
-        top.pack(fill="x")
-
-        self.drop_label = ttk.Label(
-            top,
-            text="Drag image files here, or click Add Images.",
-            anchor="center",
-            padding=14,
+        self.drop_zone = DropZone(
+            self.frame,
+            "Drop JPG/JPEG/PNG/WEBP files here, or click to add files",
+            on_click=self._add_files,
         )
-        self.drop_label.pack(fill="x")
+        self.drop_zone.pack(fill="x", pady=(0, Theme.S12))
 
         if self.dnd_enabled:
-            try:
-                self.drop_label.drop_target_register("DND_Files")
-                self.drop_label.dnd_bind("<<Drop>>", self._on_drop)
-            except Exception:
-                pass
+            self.drop_zone.label.drop_target_register("DND_Files")
+            self.drop_zone.label.dnd_bind("<<Drop>>", self._on_drop)
 
-        actions = ttk.Frame(top)
-        actions.pack(fill="x", pady=(8, 0))
-        ttk.Button(actions, text="Add Images", command=self._add_files).pack(side="left")
-        ttk.Button(actions, text="Remove Selected", command=self._remove_selected).pack(side="left", padx=6)
-        ttk.Button(actions, text="Move Up", command=self._move_up).pack(side="left")
-        ttk.Button(actions, text="Move Down", command=self._move_down).pack(side="left", padx=6)
-        ttk.Button(actions, text="Clear", command=self._clear_files).pack(side="left")
+        row = ttk.Frame(self.frame, style="Surface.TFrame")
+        row.pack(fill="both", expand=True)
 
-        self.file_list = tk.Listbox(self.frame, height=12)
-        self.file_list.pack(fill="both", expand=True, pady=(10, 10))
+        self.panel = FileListPanel(row, "Pages order")
+        self.panel.pack(side="left", fill="both", expand=True)
 
-        output_frame = ttk.LabelFrame(self.frame, text="Output", padding=8)
-        output_frame.pack(fill="x")
+        controls = ttk.Frame(row, style="Surface.TFrame")
+        controls.pack(side="right", fill="y", padx=(Theme.S12, 0))
+        ttk.Button(controls, text="Add", style="Secondary.TButton", command=self._add_files).pack(fill="x")
+        ttk.Button(controls, text="Remove", style="Secondary.TButton", command=self._remove_selected).pack(fill="x", pady=(Theme.S8, 0))
+        ttk.Button(controls, text="Move Up", style="Secondary.TButton", command=self._move_up).pack(fill="x", pady=(Theme.S8, 0))
+        ttk.Button(controls, text="Move Down", style="Secondary.TButton", command=self._move_down).pack(fill="x", pady=(Theme.S8, 0))
+        ttk.Button(controls, text="Clear", style="Secondary.TButton", command=self._clear).pack(fill="x", pady=(Theme.S8, 0))
 
-        ttk.Label(output_frame, text="PDF file path:").grid(row=0, column=0, sticky="w")
-        ttk.Entry(output_frame, textvariable=self.output_var).grid(row=0, column=1, sticky="ew", padx=6)
-        ttk.Button(output_frame, text="Browse", command=self._browse_output_file).grid(row=0, column=2)
-        output_frame.columnconfigure(1, weight=1)
+        output = ttk.LabelFrame(self.frame, text="Output", style="Card.TLabelframe", padding=10)
+        output.pack(fill="x", pady=(Theme.S12, Theme.S8))
 
-        bottom = ttk.Frame(self.frame)
-        bottom.pack(fill="x", pady=(10, 0))
+        ttk.Label(output, text="PDF file").grid(row=0, column=0, sticky="w")
+        ttk.Entry(output, textvariable=self.output_var).grid(row=0, column=1, sticky="ew", padx=Theme.S8)
+        ttk.Button(output, text="Browse", style="Secondary.TButton", command=self._pick_output).grid(row=0, column=2)
+        output.columnconfigure(1, weight=1)
 
-        self.progress = ttk.Progressbar(bottom, mode="determinate", maximum=100)
+        footer = ttk.Frame(self.frame, style="Surface.TFrame")
+        footer.pack(fill="x")
+        self.progress = ttk.Progressbar(footer, mode="determinate", maximum=100)
         self.progress.pack(fill="x")
-
-        ttk.Button(bottom, text="Create PDF", command=self._start_create_pdf).pack(anchor="e", pady=(8, 0))
-        ttk.Label(bottom, textvariable=self.status_var).pack(anchor="w")
+        ttk.Button(footer, text="Create PDF", style="Primary.TButton", command=self._start).pack(anchor="e", pady=(Theme.S8, 0))
 
     def _on_drop(self, event):
         for path in parse_drop_paths(event.data):
-            self._try_add_file(path)
+            self._add_path(path)
+        self._refresh()
 
     def _add_files(self):
-        paths = filedialog.askopenfilenames(
-            title="Select images",
-            filetypes=[("Images", "*.jpg *.jpeg *.png *.webp"), ("All files", "*.*")],
-        )
+        paths = filedialog.askopenfilenames(filetypes=[("Images", "*.jpg *.jpeg *.png *.webp"), ("All files", "*.*")])
         for path in paths:
-            self._try_add_file(path)
+            self._add_path(path)
+        self._refresh()
 
-    def _try_add_file(self, path):
+    def _add_path(self, path):
         path = path.strip()
         if not os.path.isfile(path):
             return
         if not is_supported_extension(path, SUPPORTED_IMAGE_INPUTS):
             return
-        if path in self.files:
-            return
+        self.queue.add(path)
 
-        self.files.append(path)
-        self.file_list.insert("end", path)
+    def _refresh(self):
+        self.panel.set_items(self.queue.items())
+        self.notifications.notify("PDF queue: %s files" % len(self.queue.items()), "info")
 
     def _remove_selected(self):
-        selected = list(self.file_list.curselection())
-        selected.reverse()
-        for index in selected:
-            self.file_list.delete(index)
-            del self.files[index]
-
-    def _clear_files(self):
-        self.files = []
-        self.file_list.delete(0, "end")
+        self.queue.remove_indexes(self.panel.listbox.curselection())
+        self._refresh()
 
     def _move_up(self):
-        selected = self.file_list.curselection()
-        if not selected or selected[0] == 0:
+        selected = self.panel.listbox.curselection()
+        if not selected:
             return
-        index = selected[0]
-        self.files[index - 1], self.files[index] = self.files[index], self.files[index - 1]
-        self._refresh_listbox(index - 1)
+        idx = self.queue.move_up(selected[0])
+        self._refresh()
+        self.panel.listbox.selection_set(idx)
 
     def _move_down(self):
-        selected = self.file_list.curselection()
-        if not selected or selected[0] >= len(self.files) - 1:
+        selected = self.panel.listbox.curselection()
+        if not selected:
             return
-        index = selected[0]
-        self.files[index + 1], self.files[index] = self.files[index], self.files[index + 1]
-        self._refresh_listbox(index + 1)
+        idx = self.queue.move_down(selected[0])
+        self._refresh()
+        self.panel.listbox.selection_set(idx)
 
-    def _refresh_listbox(self, selected_index):
-        self.file_list.delete(0, "end")
-        for item in self.files:
-            self.file_list.insert("end", item)
-        self.file_list.selection_set(selected_index)
+    def _clear(self):
+        self.queue.clear()
+        self._refresh()
 
-    def _browse_output_file(self):
-        path = filedialog.asksaveasfilename(
-            title="Save PDF",
-            defaultextension=".pdf",
-            filetypes=[("PDF", "*.pdf")],
-        )
+    def _pick_output(self):
+        path = filedialog.asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF", "*.pdf")])
         if path:
             self.output_var.set(path)
 
-    def _update_progress(self, current, total):
+    def _set_progress(self, current, total):
+        value = int((float(current) / float(total)) * 100.0) if total else 0
+        self.progress["value"] = value
+
+    def _progress_callback(self, current, total):
         self.frame.after(0, self._set_progress, current, total)
 
-    def _set_progress(self, current, total):
-        percentage = int((float(current) / float(total)) * 100.0) if total else 0
-        self.progress["value"] = percentage
-        self.status_var.set("Processing... %s/%s" % (current, total))
-
-    def _start_create_pdf(self):
-        if not self.files:
-            messagebox.showwarning("No images", "Please add at least one image.")
-            return
-
+    def _start(self):
+        files = self.queue.items()
         output_pdf = self.output_var.get().strip()
+
+        if not files:
+            messagebox.showwarning("No files", "Please add at least one image.")
+            return
         if not output_pdf:
-            messagebox.showwarning("Output path", "Please choose an output PDF path.")
+            messagebox.showwarning("Output file", "Please select output PDF.")
             return
 
         self.progress["value"] = 0
-        self.status_var.set("Creating PDF...")
+        self.notifications.notify("Creating PDF...", "info")
 
         def worker():
-            return create_pdf_from_images(
-                image_paths=list(self.files),
-                output_pdf_path=output_pdf,
-                progress_callback=self._update_progress,
-            )
+            return create_pdf_from_images(files, output_pdf, self._progress_callback)
 
         def on_success(_):
             self.progress["value"] = 100
-            self.status_var.set("Done.")
-            messagebox.showinfo("Success", "PDF created successfully.")
+            self.notifications.notify("PDF created successfully.", "success")
 
         def on_error(exc):
-            self.status_var.set("Failed.")
+            self.notifications.notify("PDF creation failed.", "error")
             messagebox.showerror("Error", str(exc))
 
         self.start_job_callback(worker, on_success, on_error)
