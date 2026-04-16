@@ -173,3 +173,12 @@ git push origin v1.0.0
 
 For maximum Windows 7 compatibility, build on a real Windows 7 machine (or VM) with Python 3.8.
 Artifacts built on newer Windows runners usually work, but this is not guaranteed for all target PCs.
+
+## GitHub Actions troubleshooting
+
+If a release workflow is stuck with message `Waiting for a runner to pick up this job...`:
+
+1. Open repository **Settings -> Actions -> General** and ensure Actions are enabled.
+2. Ensure you have available GitHub Actions minutes (for private repositories).
+3. Re-run workflow from Actions tab.
+4. If the runner label is deprecated, use a newer image (this project uses `windows-2022`).
