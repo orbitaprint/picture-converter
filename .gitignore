@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+build/pyinstaller/
+dist/
+*.spec
+release/PictureConverter/
+release/PictureConverter-Setup.exe
+release/PictureConverter-portable.zip
