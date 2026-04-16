@@ -127,3 +127,49 @@ python main.py
 - Operation history panel
 - Theme options (dark mode)
 - OCR integration
+
+## Build EXE and installer (Windows)
+
+### Quick local build
+
+Run from project root:
+
+```bat
+build\build_windows_release.bat
+```
+
+The script will:
+1. create `.venv`
+2. install build dependencies from `requirements-build.txt`
+3. build `PictureConverter.exe` with PyInstaller
+4. create a portable release folder in `release\PictureConverter`
+5. if Inno Setup 6 is installed, build installer `release\PictureConverter-Setup.exe`
+
+### Prerequisites for installer
+
+Install **Inno Setup 6** (optional, only needed for setup `.exe`).
+Default expected path:
+
+`C:\Program Files (x86)\Inno Setup 6\ISCC.exe`
+
+If Inno Setup is missing, you still get portable EXE build.
+
+## GitHub release automation
+
+A workflow is included in `.github/workflows/release.yml`.
+
+- Push a tag like `v1.0.0`.
+- GitHub Actions builds the app with Python 3.8 on Windows runner.
+- Workflow attaches `PictureConverter-portable.zip` to GitHub Release.
+
+### Create release tag
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+## Windows 7 release note
+
+For maximum Windows 7 compatibility, build on a real Windows 7 machine (or VM) with Python 3.8.
+Artifacts built on newer Windows runners usually work, but this is not guaranteed for all target PCs.
